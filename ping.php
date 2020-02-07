@@ -29,23 +29,23 @@ class Packet{
 }
 
 function unconnectedPing($host, $port) : array{  
-    $sock = @fsockopen( "udp://" . $host, $port );
-    if (!$sock) return [0, 0, 0];
-    $pingId = mt_rand(0,1000);
-    $buffer = chr(0x01); // UnconnectedPing packet id
-    $buffer .= pack("J", $pingId); // Ping Id
-    $buffer .= "\x00\xff\xff\x00\xfe\xfe\xfe\xfe\xfd\xfd\xfd\xfd\x12\x34\x56\x78"; // Magic
-    if(!@fwrite($sock, $buffer)) return [0, 0, 0];
-    $result = fread($sock, 1024);
-    if(strlen($result) === 0) return [0,0,0];
-    $packet = new Packet();
-    $packet->setBuffer($result);
-    $pid = ord($packet->get(1));
-    $sendPingTime = unpack("J", $packet->get(8))[1];
+	$sock = @fsockopen( "udp://" . $host, $port );
+	if (!$sock) return [0, 0, 0];
+	$pingId = mt_rand(0,1000);
+	$buffer = chr(0x01); // UnconnectedPing packet id
+	$buffer .= pack("J", $pingId); // Ping Id
+	$buffer .= "\x00\xff\xff\x00\xfe\xfe\xfe\xfe\xfd\xfd\xfd\xfd\x12\x34\x56\x78"; // Magic
+	if(!@fwrite($sock, $buffer)) return [0, 0, 0];
+	$result = fread($sock, 1024);
+	if(strlen($result) === 0) return [0,0,0];
+	$packet = new Packet();
+	$packet->setBuffer($result);
+	$pid = ord($packet->get(1));
+	$sendPingTime = unpack("J", $packet->get(8))[1];
 	$serverId = unpack("J", $packet->get(8))[1];
 	$magic = $packet->get(16);
 	$serverName = $packet->get(unpack("n", $packet->get(2))[1]);
-    return [$sendPingTime, $serverId, $serverName];
+	return [$sendPingTime, $serverId, $serverName];
 }
 
 $ping = unconnectedPing("sg.lbsg.net", 19132);
