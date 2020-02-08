@@ -1,4 +1,5 @@
 <?php
+
 /*
  *
  * @author kametan0730mc
@@ -6,55 +7,56 @@
  *
 */
 
-class Packet{
 
-	protected $offset;
-	protected $buffer;
-	
-	public function setBuffer(string $buffer = "", int $offset = 0) : void{
-		$this->buffer = $buffer;
-		$this->offset = $offset;
-	}
-	public function getBuffer() : string{
-		return $this->buffer;
-	}
-	
-	public function get(int $len) : string{
-		$remaining = strlen($this->buffer) - $this->offset;
-		return $len === 1 ? $this->buffer[$this->offset++] : substr($this->buffer, ($this->offset += $len) - $len, $len);
-	}
-	public function put(string $str) : void{
-		$this->buffer .= $str;
-	}
+const ID_UNCONNECTED_PING = 0x01;
+const ID_UNCONNECTED_PONG = 0x1c;
+
+function unconnectedPing(string $host, int $port, &$result) : bool{
+	$sock = @fsockopen("udp://" . $host, $port);
+	if (!$sock) false;
+	stream_set_timeout($sock,  1, 0);
+
+	/* Encode UnconnectedPing */
+	$sendPacketBuffer = chr(ID_UNCONNECTED_PING); // UnconnectedPing packet id
+	$sendPacketBuffer .= pack("J", mt_rand(0,100000)); // Ping Id
+	$sendPacketBuffer .= "\x00\xff\xff\x00\xfe\xfe\xfe\xfe\xfd\xfd\xfd\xfd\x12\x34\x56\x78"; // Magic
+
+	if(!@fwrite($sock, $sendPacketBuffer)) return false;
+	$receivePacketBuffer = fread($sock, 1024);
+	if(strlen($receivePacketBuffer) === 0) return false;
+
+	/* Decode UnconnectedPong */
+	$pid = ord(substr($receivePacketBuffer, 0, 1));
+	if($pid !== ID_UNCONNECTED_PONG) return false;
+	$sendPingTime = unpack("J", substr($receivePacketBuffer, 1, 8))[1];
+	$serverId = unpack("J", substr($receivePacketBuffer, 9, 8))[1];
+	$magic = substr($receivePacketBuffer, 17, 16);
+	$serverData = substr($receivePacketBuffer, 35, unpack("n", substr($receivePacketBuffer, 33, 2))[1]);
+	$info = explode(';', $serverData);
+	$result = $info;
+	return true;
 }
 
-function unconnectedPing($host, $port) : array{  
-	$sock = @fsockopen( "udp://" . $host, $port );
-	if (!$sock) return [0, 0, 0];
-	$pingId = mt_rand(0,1000);
-	$buffer = chr(0x01); // UnconnectedPing packet id
-	$buffer .= pack("J", $pingId); // Ping Id
-	$buffer .= "\x00\xff\xff\x00\xfe\xfe\xfe\xfe\xfd\xfd\xfd\xfd\x12\x34\x56\x78"; // Magic
-	if(!@fwrite($sock, $buffer)) return [0, 0, 0];
-	$result = fread($sock, 1024);
-	if(strlen($result) === 0) return [0,0,0];
-	$packet = new Packet();
-	$packet->setBuffer($result);
-	$pid = ord($packet->get(1));
-	$sendPingTime = unpack("J", $packet->get(8))[1];
-	$serverId = unpack("J", $packet->get(8))[1];
-	$magic = $packet->get(16);
-	$serverName = $packet->get(unpack("n", $packet->get(2))[1]);
-	return [$sendPingTime, $serverId, $serverName];
-}
-
-$ping = unconnectedPing("sg.lbsg.net", 19132);
-if($ping[2] === 0){
-	print("error");
+if(!unconnectedPing("sg.lbsg.net", 19132, $result)) {
+	print("Failed to get information");
 }else{
-	print($ping[2]);
+
+	$mcpe = $result[0]; // MCPE
+	// ↓ pmmp and vanilla
+	$serverName = $result[1];
+	$unknown1 = $result[2]; // ?
+	$version = $result[3];
+	$loggedInPlayer = $result[4];
+	$maxPlayer = $result[5];
+	$unknown2 = $result[6]; // ?
+	/*
+	// ↓ vanilla only
+	$worldName = $result[7];
+	$gameMode = $result[8];
+	$unknown3 = $result[9]; // ?
+	$unknown4 = $result[10]; // ?
+	$unknown5 = $result[11]; // ?
+	$unknown6 = $result[12]; // ?
+	*/
+	print($serverName . " (" . $loggedInPlayer . "/" . $maxPlayer . ")");
 }
-
-
-
-
