@@ -15,7 +15,7 @@ const MAGIC = "\x00\xff\xff\x00\xfe\xfe\xfe\xfe\xfd\xfd\xfd\xfd\x12\x34\x56\x78"
 
 function unconnectedPing(string $host, int $port, &$result) : bool{
 	$sock = @fsockopen("udp://" . $host, $port);
-	if (!$sock) false;
+	if (!$sock) return false;
 	stream_set_timeout($sock,  1, 0);
 
 	/* Encode UnconnectedPing */
