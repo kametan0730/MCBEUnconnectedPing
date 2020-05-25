@@ -34,8 +34,12 @@ function unconnectedPing(string $host, int $port, &$result) : bool{
 	$serverId = unpack("J", substr($receivePacketBuffer, 9, 8))[1];
 	$magic = substr($receivePacketBuffer, 17, 16);
 	if($magic !== MAGIC) return false;
-	$serverData = substr($receivePacketBuffer, 35, unpack("n", substr($receivePacketBuffer, 33, 2))[1]);
+	$length = unpack("n", substr($receivePacketBuffer, 33, 2))[1];
+	if($length === null or $length === 0) return false;
+	$serverData = substr($receivePacketBuffer, 35, $length);
+	if($serverData === null) return false;
 	$info = explode(';', $serverData);
+	if(count($info) === 0 or $info[0] !== "MCPE") return false;
 	$result = $info;
 	return true;
 }
@@ -60,6 +64,6 @@ if(!unconnectedPing("sg.lbsg.net", 19132, $result)) {
 	$ipv4Port = $result[10];
 	$ipv6Port = $result[11];
 	*/
-	var_dump($result);
+//var_dump($result);
 	print($serverName . " (" . $loggedInPlayer . "/" . $maxPlayer . ")");
 }
