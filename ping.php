@@ -22,7 +22,8 @@ function unconnectedPing(string $host, int $port, &$result) : bool{
 	$sendPacketBuffer = chr(ID_UNCONNECTED_PING); // UnconnectedPing packet id
 	$sendPacketBuffer .= pack("J", mt_rand(0,100000)); // Ping id
 	$sendPacketBuffer .= MAGIC; // Magic
-
+	$sendPacketBuffer .= pack("J", 730730); // Client id
+	
 	if(!@fwrite($sock, $sendPacketBuffer)) return false;
 	$receivePacketBuffer = fread($sock, 1024);
 	if(strlen($receivePacketBuffer) === 0) return false;
